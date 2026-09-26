@@ -40,7 +40,7 @@ def reinhard_normalize(img_bgr, ref_mean, ref_std):
 
 def segment_cell(img_bgr, ref_mean, ref_std):
     """
-    Improved segmentation with:
+    Segmentation in three steps:
     1. Reinhard color normalization
     2. Marker-controlled Watershed for cell boundary
     3. Morphological GAC for refined nucleus boundary

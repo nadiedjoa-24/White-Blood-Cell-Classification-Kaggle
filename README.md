@@ -71,7 +71,7 @@ data/                      Challenge data (not versioned)
 ## Reproducing
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt   # Python 3.12
 ```
 
 Place the challenge files in `data/`:

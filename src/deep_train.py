@@ -191,7 +191,6 @@ def train_model_2phase(model, train_loader, val_loader, checkpoint_path, device,
                     loss = lam * criterion(outputs, y_a) + (1.0 - lam) * criterion(outputs, y_b)
 
             if not torch.isfinite(loss):
-                optimizer.zero_grad(set_to_none=True)
                 print("  non-finite loss, batch skipped")
                 continue
             scaler.scale(loss / accum_steps).backward()
@@ -205,6 +204,7 @@ def train_model_2phase(model, train_loader, val_loader, checkpoint_path, device,
             running_loss += loss.item() * imgs.size(0)
             n_seen += imgs.size(0)
 
+        current_lr = optimizer.param_groups[0]['lr']
         scheduler.step()
         train_loss = running_loss / max(n_seen, 1)
 
@@ -222,7 +222,6 @@ def train_model_2phase(model, train_loader, val_loader, checkpoint_path, device,
         val_loss /= len(val_loader.dataset)
         val_f1 = f1_score(all_labels, all_preds, average='macro')
 
-        current_lr = optimizer.param_groups[0]['lr']
         for key, value in zip(history, (train_loss, val_loss, val_f1, current_lr)):
             history[key].append(value)
         phase = "warmup" if epoch <= warmup_epochs else "finetune"
@@ -250,7 +249,9 @@ def train_model_2phase(model, train_loader, val_loader, checkpoint_path, device,
 
 @torch.no_grad()
 def predict(model, dataset, device, batch_size=64, num_workers=4):
-    """Logits and gated features for every image of `dataset` (labels, if any, ignored)."""
+    """Logits and gated features for every image of `dataset` (labels, if any, ignored).
+    Supports models without the morphology branch only."""
+    assert not model.use_morph, "predict() does not feed morphology features"
     device = torch.device(device)
     model.eval().to(device)
     logits, features = [], []
@@ -265,12 +266,13 @@ def predict(model, dataset, device, batch_size=64, num_workers=4):
     return torch.cat(logits), torch.cat(features)
 
 
-def predict_tta(model, df, img_dir, device, tta_rounds=TTA_ROUNDS, batch_size=64):
+def predict_tta(model, df, img_dir, device, tta_rounds=TTA_ROUNDS, batch_size=64, seed=0):
     """Average of the logits of one plain pass and `tta_rounds` randomly flipped/rotated
-    passes. Returns averaged logits of shape (len(df), num_classes)."""
+    passes (seeded, so the result is reproducible). Returns logits (len(df), num_classes)."""
     df = df[['ID']]
     total, _ = predict(model, WBCDataset(df, img_dir, augmentation=val_aug), device, batch_size)
     for r in range(tta_rounds):
+        tta_aug.set_random_seed(seed + r)
         logits, _ = predict(model, WBCDataset(df, img_dir, augmentation=tta_aug), device,
                             batch_size)
         total += logits

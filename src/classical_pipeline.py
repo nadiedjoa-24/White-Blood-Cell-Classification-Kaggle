@@ -53,7 +53,7 @@ def extract_features_parallel(train_df, test_df, train_dir, test_dir, ref_mean, 
     train_features_path = features_dir / "train_features.csv"
     test_features_path = features_dir / "test_features.csv"
 
-    # Check if cached features have the new columns (HOG + Fourier)
+    # Reuse the cached features if they include the HOG and Fourier columns
     needs_reextract = True
     if train_features_path.exists():
         cached_cols = pd.read_csv(train_features_path, nrows=0).columns
@@ -95,7 +95,7 @@ def extract_features_parallel(train_df, test_df, train_dir, test_dir, ref_mean, 
 
 
 # ============================================================
-# DATA PREPARATION & FEATURE SELECTION (IMPROVED)
+# DATA PREPARATION & FEATURE SELECTION
 #    - Remove near-zero variance
 #    - Remove highly correlated features (>0.95)
 #    - Add PCA components as extra features

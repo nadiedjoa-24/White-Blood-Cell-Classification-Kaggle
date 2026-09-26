@@ -29,6 +29,7 @@ from src.deep_train import WBCClassifier, predict
 FIG_DIR = ROOT / "report" / "figures"
 DATA = ROOT / "data"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
+plt.rcParams.update({'font.size': 12})
 
 CLASS_ORDER = ['SNE', 'LY', 'MO', 'BL', 'EO', 'MY', 'BA', 'BNE', 'VLY', 'MMY', 'PMY', 'PC', 'PLY']
 
@@ -59,12 +60,12 @@ def fig_class_distribution():
         colors = [rare_color if orig[c] < median else '#3498db' for c in CLASS_ORDER]
         ax.barh(CLASS_ORDER, values, color=colors, edgecolor='white')
         for i, v in enumerate(values):
-            ax.text(v + 100, i, f'{v:,}', va='center', fontsize=8)
+            ax.text(v + 100, i, f'{v:,}', va='center', fontsize=11)
         ax.set_xlabel('Number of images')
         ax.set_title(title)
         ax.invert_yaxis()
     axes[0].axvline(median, color='gray', linestyle='--', alpha=0.7, label=f'Median ({median})')
-    axes[0].legend(fontsize=9)
+    axes[0].legend(fontsize=11)
     plt.tight_layout()
     save(fig, 'class_distribution.pdf')
 
@@ -80,7 +81,7 @@ def fig_class_examples():
     for k, (ax, (cls, label)) in enumerate(zip(axes, examples)):
         img_id = train_df[train_df['label'] == cls].sample(1, random_state=SEED)['ID'].iloc[0]
         ax.imshow(Image.open(DATA / "train" / img_id).convert('RGB'))
-        ax.set_title(f'({"abcdef"[k]}) {label}', fontsize=9)
+        ax.set_title(f'({"abcdef"[k]}) {label}', fontsize=12)
         ax.axis('off')
     plt.tight_layout()
     save(fig, 'class_examples.jpg')
@@ -97,7 +98,7 @@ def fig_crop_examples():
                   (crop, f'Cropped ({crop.shape[1]}x{crop.shape[0]})', None)]
         for i, (img, title, cmap) in enumerate(panels):
             axes[i, j].imshow(img, cmap=cmap)
-            axes[i, j].set_title(title, fontsize=10)
+            axes[i, j].set_title(title, fontsize=14)
             axes[i, j].axis('off')
     plt.tight_layout()
     save(fig, 'crop_examples.jpg')
@@ -117,10 +118,10 @@ def fig_augmentation_gallery():
     for i, cls in enumerate(classes):
         img = ds.load_image(i)
         axes[i, 0].imshow(denormalize(val_aug(image=img)['image']))
-        axes[i, 0].set_title(f'{cls}: input after CLAHE', fontsize=9)
+        axes[i, 0].set_title(f'{cls}: input after CLAHE', fontsize=13)
         for j in range(1, n_aug + 1):
             axes[i, j].imshow(denormalize(train_aug(image=img)['image']))
-            axes[i, j].set_title(f'augmented #{j}', fontsize=9)
+            axes[i, j].set_title(f'augmented #{j}', fontsize=13)
         for ax in axes[i]:
             ax.axis('off')
     plt.tight_layout()
@@ -153,7 +154,7 @@ def fig_per_class_scores(y, pred):
     ax.set_ylim(0, 1.08)
     ax.set_ylabel('Score')
     ax.set_title('Per-class precision / recall / F1 on validation (final model)')
-    ax.legend(loc='upper left', fontsize=9)
+    ax.legend(loc='upper left', fontsize=12)
     plt.tight_layout()
     save(fig, 'per_class_f1.pdf')
 
@@ -161,14 +162,14 @@ def fig_per_class_scores(y, pred):
 def fig_confusion_matrix(y, pred):
     cm = confusion_matrix(y, pred)
     cm_norm = cm / cm.sum(axis=1, keepdims=True)
-    fig, axes = plt.subplots(1, 2, figsize=(17, 7))
+    fig, axes = plt.subplots(1, 2, figsize=(13, 6))
     for ax, mat, fmt, title in ((axes[0], cm, 'd', 'Counts'),
                                 (axes[1], cm_norm, '.2f', 'Row-normalized (recall)')):
         ax.imshow(cm_norm, cmap='Blues', vmin=0, vmax=1)
         for i in range(len(mat)):
             for j in range(len(mat)):
                 if cm[i, j]:
-                    ax.text(j, i, format(mat[i, j], fmt), ha='center', va='center', fontsize=7,
+                    ax.text(j, i, format(mat[i, j], fmt), ha='center', va='center', fontsize=10,
                             color='white' if cm_norm[i, j] > 0.5 else 'black')
         ax.set_xticks(range(len(mat)), le.classes_, rotation=45, ha='right')
         ax.set_yticks(range(len(mat)), le.classes_)
@@ -185,13 +186,13 @@ def fig_qualitative_errors(val_df, y, probs):
     pred, conf = probs.argmax(1), probs.max(1)
     wrong = np.where(pred != y)[0]
     top = wrong[np.argsort(-conf[wrong])[:4]]
-    fig, axes = plt.subplots(2, 2, figsize=(8.2, 7.2))
+    fig, axes = plt.subplots(2, 2, figsize=(6.5, 6.4))
     for ax, i in zip(axes.flat, top):
         ax.imshow(Image.open(DATA / "train_precropped" / val_df.at[i, 'ID']).convert('RGB'))
         ax.set_title(f'True: {le.classes_[y[i]]} | Pred: {le.classes_[pred[i]]} '
-                     f'({100 * conf[i]:.1f}%)', fontsize=9)
+                     f'({100 * conf[i]:.1f}%)', fontsize=12)
         ax.axis('off')
-    fig.suptitle('Most confident validation errors (final model)', fontsize=11)
+    fig.suptitle('Most confident validation errors (final model)', fontsize=13)
     plt.tight_layout()
     save(fig, 'qualitative_errors.jpg')
 
@@ -199,11 +200,11 @@ def fig_qualitative_errors(val_df, y, probs):
 def fig_feature_importance():
     df = pd.read_csv(ROOT / "results" / "classical_ml" / "feature_importance_lightgbm.csv")
     df = df.sort_values('importance', ascending=False).head(10)[::-1]
-    fig, ax = plt.subplots(figsize=(8, 4.8))
+    fig, ax = plt.subplots(figsize=(5.2, 3.6))
     ax.barh(df['feature'], df['importance'], color='#4C78A8')
-    ax.tick_params(axis='y', labelsize=8)
+    ax.tick_params(axis='y', labelsize=10)
     ax.set_xlabel('Importance (split count)')
-    ax.set_title('Top-10 handcrafted features (LightGBM split-count importance)', fontsize=10)
+    ax.set_title('Top-10 features (LightGBM split counts)', fontsize=12)
     plt.tight_layout()
     save(fig, 'feature_importance_ml.pdf')
 
@@ -219,22 +220,22 @@ def fig_iteration_timeline():
     labels = [f'{s:.3f}' for s in scores]
     labels[4], labels[8] = '0.822*', '0.705\n(final)'
     colors = ['#3498db'] * 3 + ['#e74c3c', '#f39c12', '#95a5a6', '#3498db', '#3498db', '#27ae60']
-    fig, ax = plt.subplots(figsize=(16, 5))
+    fig, ax = plt.subplots(figsize=(13, 5))
     x = np.arange(len(names))
     ax.bar(x, scores, color=colors, edgecolor='white', width=0.65)
     for i, (s, lab) in enumerate(zip(scores, labels)):
-        ax.text(i, s + 0.008, lab, ha='center', fontsize=8.5, fontweight='bold')
+        ax.text(i, s + 0.008, lab, ha='center', fontsize=11, fontweight='bold')
     ax.annotate('', xy=(5, 0.74), xytext=(4.35, 0.80), arrowprops=dict(arrowstyle='->', color='red', lw=2))
-    ax.text(4.85, 0.80, 'Leakage fix', ha='left', fontsize=8, color='red', fontstyle='italic')
-    ax.text(4, 0.875, '* inflated by data leakage', ha='center', fontsize=7.5, color='#f39c12',
+    ax.text(4.85, 0.80, 'Leakage fix', ha='left', fontsize=11, color='red', fontstyle='italic')
+    ax.text(4, 0.88, '* inflated by data leakage', ha='center', fontsize=10, color='#f39c12',
             fontstyle='italic')
     ax.axhline(0.705, color='gray', linestyle='--', alpha=0.4)
     legend = {'#3498db': 'Other iterations', '#e74c3c': 'Failed experiment',
               '#f39c12': 'Leaky validation (invalid)', '#95a5a6': 'Leakage fix',
               '#27ae60': 'Final model'}
     ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=c, label=l) for c, l in legend.items()],
-              fontsize=8.5, loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=5, frameon=False)
-    ax.set_xticks(x, names, fontsize=8.5)
+              fontsize=11, loc='upper center', bbox_to_anchor=(0.5, -0.24), ncol=5, frameon=False)
+    ax.set_xticks(x, names, fontsize=10.5)
     ax.set_ylabel('Validation macro-F1')
     ax.set_ylim(0, 0.95)
     ax.set_title('Validation macro-F1 across the 9 deep-learning experiments')

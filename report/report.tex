@@ -1,4 +1,4 @@
-\documentclass[twocolumn]{article}
+\documentclass[twocolumn,a4paper]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -6,9 +6,10 @@
 \usepackage{graphicx}
 \usepackage{amsmath,amsfonts,amssymb}
 \usepackage{hyperref}
-\hypersetup{pdftitle={Classical and Deep Learning Approaches for White Blood Cell Classification}, pdfauthor={Th\'eophile Nadiedjoa}}
+\hypersetup{pdftitle={Classical and Deep Learning Approaches for White Blood Cell Classification from Peripheral Blood Smear Microscopy}, pdfauthor={Th\'eophile Nadiedjoa}}
 \usepackage{float}
 \usepackage{times}
+\usepackage{microtype}
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{caption}
@@ -36,7 +37,7 @@ White blood cell (WBC) classification from peripheral blood smear microscopy is 
 
 \textbf{Part~II} traces nine successive deep-learning experiments, each motivated by specific failures of the previous one. Starting from a vanilla EfficientNet-B3 baseline (macro-F1~=~0.55), we explored CBAM attention, late fusion with handcrafted morphometry, Wiener/Laplacian preprocessing, and paper-based segmentation pipelines, before pivoting to ConvNeXt-Base with Focal Loss, CutMix/Mixup, and 2-phase fine-tuning. We document a critical data leakage pitfall (an apparent F1=0.82, corrected to a true F1=0.70 once the validation split was fixed), and present post-hoc experiments with ResNet50, ResNeXt101 with multi-task learning, and a controlled ablation of handcrafted features. The final model is a ConvNeXt-Base with a lightweight channel-attention gate, CLAHE preprocessing and an MLP head, achieving macro-F1 = 0.705 / accuracy = 0.937 on validation.
 
-Beyond raw scores, our results suggest that (1)~learned representations clearly outperform handcrafted features (0.70 vs.\ 0.51 macro-F1), (2)~within the designs we tried, the backbone mattered more than architectural complexity (attention, multi-task learning and fusion did not bring a measurable gain over a plain ConvNeXt + MLP), and (3)~a correct evaluation protocol is essential: splitting after oversampling inflated the validation score from 0.70 to 0.82.
+Beyond raw scores, our results suggest that (1)~learned representations clearly outperform handcrafted features (0.70 vs.\ 0.51 macro-F1), (2)~within the designs we tried, architectural complexity did not pay off: attention, multi-task learning and fusion did not bring a measurable gain over a plain ConvNeXt + MLP, and (3)~a correct evaluation protocol is essential: splitting after oversampling inflated the validation score from 0.70 to 0.82.
 
 % ============================================================
 \section{Introduction}
@@ -44,7 +45,7 @@ Beyond raw scores, our results suggest that (1)~learned representations clearly 
 
 The differential white blood cell count is one of the most commonly ordered laboratory tests in clinical practice. It provides critical diagnostic information for conditions ranging from infections and allergies to leukemia and other hematological malignancies~\cite{aldulaimi2018}. Traditionally performed manually by trained hematologists examining Giemsa- or Wright-stained blood smears under a microscope, this process is time-consuming, subjective, and prone to inter-observer variability.
 
-Automated WBC classification using computer vision has been an active area of research, with approaches spanning from classical image processing and handcrafted feature extraction~\cite{rezatofighi2011, gautam2014} to modern deep learning methods~\cite{tran2018, qin2018}. As highlighted by Al-Dulaimi et al.~\cite{aldulaimi2018} in their comprehensive survey, several critical challenges persist:
+Automated WBC classification using computer vision has been an active area of research, with approaches spanning from classical image processing and handcrafted feature extraction~\cite{rezatofighi2011, gautam2014} to modern deep learning methods~\cite{qin2018, togacar2020}. As highlighted by Al-Dulaimi et al.~\cite{aldulaimi2018} in their comprehensive survey, several critical challenges persist:
 
 \begin{itemize}
     \item \textbf{Staining variability}: Different protocols (Giemsa, Wright, May-Gr\"unwald) lead to significant color variations.
@@ -66,7 +67,7 @@ The literature on WBC classification can be broadly organized into two families:
 Early and still influential work relies on explicit segmentation and handcrafted descriptors. Typical pipelines isolate the nucleus and cytoplasm using thresholding, region growing, Watershed, K-Means, Active Contours, or morphological filtering, then extract shape/color/texture features (e.g., Hu moments, GLCM, LBP, Fourier descriptors) for conventional classifiers~\cite{rezatofighi2011, gautam2014, ghosh2010}. Rustam et al.~\cite{rustam2022} combine texture and RGB features with oversampling of the minority classes. The review by Al-Dulaimi et al.~\cite{aldulaimi2018} emphasizes that these approaches are interpretable and medically grounded, but strongly depend on segmentation quality and often degrade under staining/illumination variability.
 
 \paragraph{Deep learning and attention mechanisms.}
-More recent studies replace handcrafted features with end-to-end CNN feature learning~\cite{qin2018, tran2018}, usually via transfer learning to handle limited medical data. To\u{g}a\c{c}ar et al.~\cite{togacar2020} instead extract deep features from pretrained CNNs and feed them to conventional classifiers, a hybrid we also evaluate. Attention modules (e.g., CBAM, SE) have been proposed to improve focus on discriminative regions~\cite{woo2018cbam, hu2018squeeze}. In practice, gains are task-dependent and often smaller than expected when the baseline backbone is already strong.
+More recent studies replace handcrafted features with end-to-end CNN feature learning~\cite{qin2018}, usually via transfer learning to handle limited medical data, or use deep semantic segmentation to isolate blood cells~\cite{tran2018}. To\u{g}a\c{c}ar et al.~\cite{togacar2020} instead extract deep features from pretrained CNNs and feed them to conventional classifiers, a hybrid we also evaluate. Attention modules (e.g., CBAM, SE) have been proposed to improve focus on discriminative regions~\cite{woo2018cbam, hu2018squeeze}. In practice, gains are task-dependent and often smaller than expected when the baseline backbone is already strong.
 
 \paragraph{Positioning of this work.}
 Our report follows this evolution explicitly: Part~I implements a robust classical pipeline inspired by the survey recommendations~\cite{aldulaimi2018}, while Part~II evaluates modern transfer-learning pipelines (EfficientNet/ConvNeXt/ResNet/ResNeXt), attention variants, and hybrid fusion with handcrafted features. This design enables a controlled comparison between interpretability-oriented classical vision and high-capacity learned representations.
@@ -81,7 +82,7 @@ The challenge dataset consists of 28,901 training images and 9,634 test images o
 
 \subsection{Class Distribution and Imbalance}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Class distribution in the training set.}
 \label{tab:class_dist}
@@ -109,7 +110,7 @@ PLY & Prolymphocyte        &     11 &  0.04 \\
 \end{tabular}
 \end{table}
 
-The dataset exhibits \textbf{extreme class imbalance}: the ratio between the largest class (SNE, 13,015) and the smallest (PLY, 11) is 1,183:1. This reflects the natural WBC distribution in peripheral blood but poses a severe challenge for classification, as a naive model predicting only SNE achieves 45\% accuracy while completely failing on clinically important rare classes.
+The dataset exhibits \textbf{extreme class imbalance}: the ratio between the largest class (SNE, 13,015) and the smallest (PLY, 11) is 1,183:1. This reflects the natural WBC distribution in peripheral blood (Table~\ref{tab:class_dist}, Figure~\ref{fig:class_dist}) but poses a severe challenge for classification, as a naive model predicting only SNE achieves 45\% accuracy while completely failing on clinically important rare classes.
 
 \begin{figure*}[tbp]
     \centering
@@ -141,7 +142,7 @@ Accurate separation of nucleus and cytoplasm is the critical first step, since n
 
 \subsubsection{Reinhard Color Normalization}
 
-Staining variability across slides causes significant color shifts that can confuse both segmentation algorithms and classifiers. We apply Reinhard color normalization~\cite{reinhard2001} in LAB color space: for each image, channel-wise mean and standard deviation are matched to a reference computed from a stratified sample of 40 images per class. This standardizes the color distribution while preserving morphological structure. One limitation of our implementation is that the reference standard deviation is the spread of the per-image channel means rather than the pixel-level standard deviation, which compresses contrast before segmentation.
+Staining variability across slides causes significant color shifts that can confuse segmentation algorithms. Before segmentation, we apply Reinhard color normalization~\cite{reinhard2001} in LAB color space: for each image, channel-wise mean and standard deviation are matched to a reference computed from a stratified sample of up to 40 distinct images per class. The normalized image is used only to compute the masks; the features themselves are measured on the original image. One limitation of our implementation is that the reference standard deviation is the spread of the per-image channel means rather than the pixel-level standard deviation, which compresses contrast before segmentation.
 
 \subsubsection{Marker-Controlled Watershed}
 
@@ -167,7 +168,7 @@ After extraction, we remove near-zero variance features and features with correl
 
 \subsection{Classification}
 
-Features are standardized (zero mean, unit variance) and class imbalance is handled via SMOTE~\cite{chawla2002smote} (k=3 neighbors) inside each cross-validation fold. Rather than raising every class to the majority count (13,015 SNE images), which would make the SVM-based models impractically slow, SMOTE raises each rare class to 2,000 samples. We evaluate 6 classifiers with 5-fold stratified cross-validation:
+Features are standardized (zero mean, unit variance) and class imbalance is handled via SMOTE~\cite{chawla2002smote} (k=3 neighbors) inside each cross-validation fold. Rather than raising every class to the majority count (13,015 SNE images), which would make the SVM-based models impractically slow, SMOTE raises each rare class to 2,000 samples (with $k=1$ when a class has too few samples in a fold for $k=3$). We evaluate 6 classifiers with 5-fold stratified cross-validation:
 
 \begin{itemize}
     \item \textbf{LightGBM}~\cite{ke2017lightgbm} (tuned via Optuna~\cite{akiba2019optuna}: 1755 estimators, lr=0.034, 54 leaves, depth 6)
@@ -182,7 +183,7 @@ Features are standardized (zero mean, unit variance) and class imbalance is hand
 
 The classical ML pipeline achieves modest performance on this 13-class problem (Table~\ref{tab:classical_results}). The best model is LightGBM (macro-F1 = 0.509, out-of-fold accuracy = 0.832); the ensembles do not improve over it.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Classical ML: 5-fold CV macro-F1 per classifier.}
 \label{tab:classical_results}
@@ -215,14 +216,14 @@ These limitations motivate the transition to deep learning in Part~II. Note also
 
 To improve interpretability, we extracted global feature importances (split counts) from the LightGBM model trained on the full 151-feature set. Figure~\ref{fig:feature_importance_ml} reports the top-ranked predictors, and Table~\ref{tab:top10_features_ml} lists the top~10.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{feature_importance_ml.pdf}
     \caption{Top feature importances from LightGBM in Part~I (split counts).}
     \label{fig:feature_importance_ml}
 \end{figure}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Top-10 LightGBM features in Part~I. All are nucleus features.}
 \label{tab:top10_features_ml}
@@ -320,12 +321,12 @@ This preprocessing is performed \textbf{once, offline}, and saved to disk, which
 
 On top of the stored crops, CLAHE (contrast-limited adaptive histogram equalization) is applied to the value channel of the HSV representation (clip limit 2.0, $8\times8$ tiles). This step is deterministic and applied to every image at training, validation and test time, before augmentation; hue and saturation, which carry the stain information, are left unchanged.
 
-\begin{figure}[h]
+\begin{figure*}[tbp]
     \centering
-    \includegraphics[width=\linewidth]{crop_examples.jpg}
+    \includegraphics[width=0.75\textwidth]{crop_examples.jpg}
     \caption{HSV-based cell cropping. Top: raw images. Middle: HSV score heatmaps. Bottom: cropped outputs.}
     \label{fig:crop_examples}
-\end{figure}
+\end{figure*}
 
 \subsection{Handling Class Imbalance}
 
@@ -342,13 +343,13 @@ We combine three strategies:
 
 The augmentation pipeline of the final model uses Albumentations~\cite{buslaev2020} with geometric transforms and moderate photometric perturbation (Table~\ref{tab:augmentation}, Figure~\ref{fig:augmentation_gallery}). Validation and test images are only resized to $224\times224$ and normalized.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Augmentation pipeline of the final model (applied after CLAHE, in this order).}
 \label{tab:augmentation}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.1cm}>{\raggedright\arraybackslash}p{0.75cm}>{\raggedright\arraybackslash}p{3.15cm}@{}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}p{0.75cm}>{\raggedright\arraybackslash}p{3.1cm}@{}}
 \toprule
 \textbf{Transform} & \textbf{Prob.} & \textbf{Challenge Addressed} \\
 \midrule
@@ -367,18 +368,18 @@ CoarseDropout (1--3 holes) & 0.25 & Occlusion robustness \\
 
 \textbf{Note}: Apart from the small hue jitter, this pipeline does not include explicit staining augmentation (HSV shifts, RGBShift). These were explored in earlier experiments and are discussed as potential improvements.
 
-\begin{figure}[h]
+\begin{figure*}[tbp]
     \centering
     \includegraphics[width=\linewidth]{augmentation_gallery.jpg}
     \caption{Augmentation gallery: CLAHE-processed crop (left) and 6 augmented views drawn from the training pipeline.}
     \label{fig:augmentation_gallery}
-\end{figure}
+\end{figure*}
 
 \subsection{Architecture: ConvNeXt-Base + Attention Gate + MLP Head}
 
 \subsubsection{Transfer Learning with ConvNeXt}
 
-Al-Dulaimi et al.~\cite{aldulaimi2018} warn that training deep networks from scratch requires datasets far larger than typical medical imaging datasets. Following this guidance, we use transfer learning with ConvNeXt-Base~\cite{liu2022convnext} (88M parameters, pre-trained on ImageNet), which modernizes the CNN architecture with design elements from Vision Transformers while retaining CNN efficiency. Our architecture choice evolved from EfficientNet-B3 (12M params, F1 = 0.55) to ConvNeXt-Base (val F1 = 0.70), with consistently better performance from the larger model.
+Al-Dulaimi et al.~\cite{aldulaimi2018} warn that training deep networks from scratch requires datasets far larger than typical medical imaging datasets. Following this guidance, we use transfer learning with ConvNeXt-Base~\cite{liu2022convnext} (88M parameters, pre-trained on ImageNet), which modernizes the CNN architecture with design elements from Vision Transformers while retaining CNN efficiency. Our architecture choice evolved from EfficientNet-B3 (12M params, F1 = 0.55) to ConvNeXt-Base (val F1 = 0.70); this jump came with a complete redesign of the training pipeline (Section~\ref{sec:leakage}), so it cannot be attributed to the backbone alone.
 
 \subsubsection{Attention Gate and Classification Head}
 
@@ -399,13 +400,13 @@ Early stopping (patience=10 on val macro-F1) prevents overfitting. Training uses
 
 For reproducibility, Table~\ref{tab:hparams} consolidates the training configuration of the final model.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Final hyperparameters for the final model.}
 \label{tab:hparams}
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{5.6cm}@{}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{5.5cm}@{}}
 \toprule
 \textbf{Parameter} & \textbf{Value} \\
 \midrule
@@ -466,8 +467,8 @@ Exp 2 & EffNet-B3 + CBAM & HSV crop, Albumentations, hybrid & 0.633 & CNN+SVM & 
 Exp 3 & EffNet-B3 + CBAM & Late fusion, Wiener/Laplacian & 0.641 & Fused+SVM & Marginal gain from fusion \\
 Exp 4 & EffNet-B3 + CBAM & Paper-2014 segmentation, 4 feats & 0.591 & Fused+RF & Rigid pipeline hurt perf.\ \\
 Exp 5 & ConvNeXt-Base & Focal Loss, CutMix, 2-phase, offline crops & 0.822 & DL & \textbf{Inflated by data leakage!} \\
-Exp 6 & ConvNeXt-Base & Leakage fix, visual QC & 0.699 & DL & True performance after leakage fix \\
-Exp 7 & ResNet50 + SpatialAtt & Late fusion, 4 morpho feats & 0.651 & DL & Weaker backbone $\Rightarrow$ lower F1 \\
+Exp 6 & ConvNeXt-Base & Leakage fix & 0.699 & DL & True performance after leakage fix \\
+Exp 7 & ResNet50 + SpatialAtt & Late fusion, 4 morpho feats & 0.651 & DL & Below the ConvNeXt pipelines \\
 Exp 8 & ResNeXt101 + CBAM & Multi-task aux heads, 6 morpho feats & 0.665 & DL & Complex but no gain over Exp 6 \\
 Exp 9 & ConvNeXt + SE gate & CLAHE, with/without morpho ablation & \textbf{0.705} & DL & \textbf{Final model}; morpho feats $\approx$ no effect \\
 \bottomrule
@@ -487,21 +488,21 @@ To improve the network's focus on the discriminative nuclear regions, we introdu
 
 To further guide the network, we explored late fusion architectures (Exp~3) by concatenating the CNN embeddings with 8 handcrafted morphological features (such as roundness, eccentricity, and nucleus-to-cell ratio) and adding the nucleus mask as a fourth input channel. We also tested explicit denoising inputs using Wiener and Laplacian filters. However, these complex hybrid pipelines yielded only a marginal improvement (F1 = 0.641, within the noise of the validation split) at the cost of significantly slower training.
 
-Furthermore, an attempt to replace our ad-hoc cropping with the classical segmentation pipeline of Gautam and Bhadauria~\cite{gautam2014} (Exp~4) actively degraded performance (F1 = 0.591), mostly on the rare classes. The rigidity of the classical thresholding failed to generalize to the staining heterogeneity of our dataset, showing that manually engineered preprocessing could bottleneck deep feature extraction.
+Furthermore, an attempt to replace our ad-hoc cropping with the classical segmentation pipeline of Gautam and Bhadauria~\cite{gautam2014} (Exp~4) actively degraded performance (F1 = 0.591), mostly on the rare classes. This experiment also removed the class weights from the loss and reduced the handcrafted features from 8 to 4, so the drop cannot be attributed to the segmentation alone; it nevertheless suggests that a rigid classical thresholding does not cope well with the staining heterogeneity of our dataset.
 
 \subsection{Scaling Capacity and Addressing Data Leakage}
 \label{sec:leakage}
 
 Given the diminishing returns of explicit feature engineering, we completely redesigned the pipeline to prioritize backbone capacity over architectural complexity. We transitioned to a ConvNeXt-Base model (88M parameters), discarded all attention modules and handcrafted branches, and implemented a two-phase fine-tuning strategy with Focal Loss and CutMix/Mixup, offline oversampling of the rare classes and offline cropping (Exp~5).
 
-During this phase, we identified a critical data leakage pitfall: splitting the data \emph{after} the offline oversampling allowed augmented copies of training images to end up in the validation set, artificially inflating the macro-F1 to 0.82. By splitting the dataset on original image identities and keeping augmented copies on their parent's side (Exp~6), we measured the true generalization performance: a macro-F1 of 0.699 and an accuracy of 0.936, a 12-point drop that shows the size of the leakage. A hybrid classifier on the backbone features (Random Forest) scored lower (0.68).
+During this phase, we identified a critical data leakage pitfall: splitting the data \emph{after} the offline oversampling allowed augmented copies of training images to end up in the validation set, artificially inflating the macro-F1 to 0.82 (the validation set also contained augmented images, so its composition differed from later experiments). By splitting the dataset on original image identities and keeping augmented copies on their parent's side (Exp~6), we measured the true generalization performance: a macro-F1 of 0.699 and an accuracy of 0.936, a 12-point drop that shows the size of the leakage. A hybrid classifier on the backbone features (Random Forest) scored lower (0.68).
 
 \subsection{Post-Hoc Ablations: Does Morphology Help Heavy Networks?}
 \label{sec:ablations}
 
 To test our pipeline choice, we conducted post-hoc experiments combining other heavy backbones with morphological feature injection. With ResNet50~\cite{he2016deep} and a spatial attention gate (Exp~7, 0.651) and with ResNeXt101~\cite{xie2017aggregated}, CBAM and multi-task auxiliary heads (Exp~8, 0.665), the models did not reach ConvNeXt-Base. Setting their morphological inputs to zero at inference lowered their F1 by 0.017 and 0.173: these networks rely on the handcrafted branch, even though it does not make them better than the simpler ConvNeXt pipeline. As ResNeXt101 has about the same size as ConvNeXt-Base, model size alone does not explain the gap, although Exp~8 also differs from Exp~6 in several other respects.
 
-In a final controlled ablation (Exp~9), we added a lightweight channel-attention gate, CLAHE preprocessing and a stronger augmentation to the ConvNeXt-Base pipeline, and compared a pure deep-feature model against one fused with 6 morphological features. The results were virtually identical (0.7036 with vs.\ 0.7052 without, a 0.0016 difference), suggesting that ConvNeXt-Base already captures the information these descriptors provide. We kept the simpler variant without handcrafted features as our final model. Its score (0.705) is the highest of the nine experiments, but the difference with Exp~6 (0.699) is within the noise of the validation split.
+In a final controlled ablation (Exp~9), we added a lightweight channel-attention gate, CLAHE preprocessing and a stronger augmentation to the ConvNeXt-Base pipeline, and compared a pure deep-feature model against one fused with 6 morphological features. The results were virtually identical (0.7036 with vs.\ 0.7052 without, a 0.0016 difference), showing that these 6 descriptors bring no additional information to this model. We kept the simpler variant without handcrafted features as our final model. Its score (0.705) is the highest of the nine experiments, but the difference with Exp~6 (0.699) is within the noise of the validation split.
 
 % ============================================================
 \section{Results and Discussion}
@@ -509,7 +510,7 @@ In a final controlled ablation (Exp~9), we added a lightweight channel-attention
 
 \subsection{Approach Comparison}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \caption{Comparison of approaches.}
 \label{tab:comparison}
@@ -529,7 +530,7 @@ DL final (ConvNeXt-Base, Final Model) & \textbf{0.705} & \textbf{0.937} \\
 {\footnotesize The classical pipeline is scored by 5-fold cross-validation, the deep learning models on a held-out validation split.}
 \end{table}
 
-The deep learning approach with ConvNeXt-Base (0.705 macro-F1) substantially outperforms both classical ML (0.509) and the DL baseline with EfficientNet-B3 (0.552). The gap between accuracy (0.937) and macro-F1 (0.705) reflects the extreme class imbalance: the model correctly classifies common classes (SNE, LY) but struggles with rare ones.
+As summarized in Table~\ref{tab:comparison}, the deep learning approach with ConvNeXt-Base (0.705 macro-F1) substantially outperforms both classical ML (0.509) and the DL baseline with EfficientNet-B3 (0.552). The gap between accuracy (0.937) and macro-F1 (0.705) reflects the extreme class imbalance: the model correctly classifies common classes (SNE, LY) but struggles with rare ones.
 
 \subsection{Per-Class Analysis (Final Model)}
 
@@ -571,7 +572,7 @@ These confusions are consistent with genuine biological continua between neighbo
 
 To complement the confusion matrix, we inspected the misclassified validation images. Figure~\ref{fig:qualitative_errors} shows the four errors made with the highest confidence. Three of them involve neighbouring classes with borderline morphology (band vs.\ segmented neutrophil, blast vs.\ lymphocyte, prolymphocyte vs.\ lymphocyte). The fourth, an eosinophil predicted as a monocyte, is a heavily noise-degraded image: image quality, not only class overlap, also causes errors.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{qualitative_errors.jpg}
     \caption{The four most confident validation errors of the final model (confidence above 97\%).}
@@ -590,21 +591,21 @@ The performance gap ($\sim$0.20 F1 difference) likely comes from three factors:
 
 \subsection{Lessons from the Iterative Journey}
 
-The 9-experiment journey yielded several generalizable insights:
+The 9-experiment journey (Figure~\ref{fig:iteration_timeline}) yielded several insights:
 
 \begin{enumerate}
-    \item \textbf{The backbone matters more than added modules}: The single largest performance jump came from switching EfficientNet-B3 (12M) to ConvNeXt-Base (88M). None of the attention, fusion or multi-task designs we tried closed that gap, including with a backbone of similar size (ResNeXt101).
+    \item \textbf{The pipeline redesign mattered more than added modules}: The single largest performance jump came with Exp~5, which changed the backbone (EfficientNet-B3 to ConvNeXt-Base) together with the loss, the batch mixing, the training schedule and the preprocessing. None of the attention, fusion or multi-task designs we tried afterwards brought a measurable gain.
     \item \textbf{Handcrafted features did not help ConvNeXt}: ResNet50 and ResNeXt101 relied on their morphology branch, but it made no difference for ConvNeXt-Base (0.0016 between the two variants of Exp~9).
     \item \textbf{Data leakage is insidious}: The leakage episode (0.82 $\to$ 0.70) demonstrates how splitting after oversampling can create subtle errors. Always split by original image identity.
     \item \textbf{Simplicity wins}: The final model is a backbone + MLP with a lightweight attention gate and CLAHE preprocessing, and it is within noise of the plain backbone + MLP. More complex designs (CBAM, spatial attention, multi-task, late fusion) added engineering complexity without consistent gains.
-    \item \textbf{Hybrid classifiers suit small models}: CNN+SVM/RF outperformed end-to-end training for EfficientNet-B3 but not for ConvNeXt-Base, suggesting that larger backbones produce better-separated feature spaces that do not need kernel methods.
+    \item \textbf{Hybrid classifiers helped only the first backbone}: CNN+SVM/RF outperformed end-to-end training for EfficientNet-B3, but not for ResNet50 (0.593 vs.\ 0.651) nor ConvNeXt-Base (0.68 vs.\ 0.70). With only a few backbones, and the choice made on the validation set, this remains an observation rather than a general rule.
 \end{enumerate}
 
 \subsection{Computational Cost and Clinical Feasibility}
 
 Although ConvNeXt-Base is a large model ($\sim$88M parameters), the offline HSV cropping stage substantially reduces irrelevant background and accelerates training and inference: the final model trains at $\approx$84\,s/epoch with a frozen backbone and $\approx$140\,s/epoch during fine-tuning on a single RTX~3090.
 
-At inference, the pipeline performs a single forward pass per crop (plus optional TTA for leaderboard scoring). This makes the non-TTA mode suitable for near-real-time triage scenarios, while TTA can be reserved for high-confidence offline batch reporting.
+At inference, the pipeline performs a single forward pass per crop, plus 8 optional TTA passes. We did not measure latency, and with rare classes such as PLY still unrecognized, the model is a research baseline rather than a tool ready for clinical use.
 
 \begin{figure*}[tbp]
     \centering
@@ -630,7 +631,7 @@ The deep learning journey revealed that the most effective design is close to th
     \item \textbf{Leakage-free evaluation} with original-identity-based splits.
 \end{enumerate}
 
-This achieves macro-F1 = 0.705 on validation, substantially outperforming classical ML (0.509) and the initial DL baseline (0.552). The iterative journey demonstrated that the choice of backbone and a sound evaluation protocol matter more than architectural complexity.
+This achieves macro-F1 = 0.705 on validation, substantially outperforming classical ML (0.509) and the initial DL baseline (0.552). The iterative journey suggests that a strong training pipeline and a sound evaluation protocol matter more than architectural complexity.
 
 Future directions include: (1)~higher input resolution ($384\times384$), (2)~staining-aware augmentation (HSV shifts, RGBShift), (3)~multi-backbone ensemble (ConvNeXt + EfficientNetV2 + Swin Transformer), (4)~hierarchical classification exploiting the granulocyte maturation chain (PMY$\to$MY$\to$MMY$\to$BNE$\to$SNE), (5)~Macenko stain normalization~\cite{macenko2009} as preprocessing, and (6)~external data or synthetic generation (GANs/diffusion) for the PLY class (only 11 images).
 
