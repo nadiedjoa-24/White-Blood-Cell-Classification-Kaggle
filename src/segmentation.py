@@ -107,7 +107,7 @@ def segment_cell(img_bgr, ref_mean, ref_std):
     mask_cell_filled = ndimage.binary_fill_holes(mask_cell > 0).astype(np.uint8) * 255
 
     # =====================================================
-    # NUCLEUS SEGMENTATION — GAC (Geometric Active Contours)
+    # NUCLEUS SEGMENTATION — GAC (Geodesic Active Contours)
     # =====================================================
     L_chan = img_lab[:, :, 0]
     L_masked = L_chan.copy()

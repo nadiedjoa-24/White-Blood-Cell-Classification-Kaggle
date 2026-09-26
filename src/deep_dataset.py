@@ -1,9 +1,9 @@
 """
-Data pipeline of the deployed deep-learning model (deep_9 no-morph).
+Data pipeline of the final deep-learning model (deep_9 no-morph).
 
 - Offline steps, run once: oversampling of rare classes, HSV-based white-cell cropping.
 - Online steps: CLAHE on the HSV value channel, Albumentations augmentation, normalization.
-- Leakage-free train/validation split (augmented copies always follow their parent image).
+- Leakage-free train/validation split (augmented copies of validation images are discarded).
 """
 import shutil
 import time
@@ -17,7 +17,7 @@ import torch
 from albumentations.pytorch import ToTensorV2
 from PIL import Image
 from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, get_worker_info
 
 SEED = 42
 
@@ -190,8 +190,9 @@ def parent_stem(img_id):
 
 
 def leakage_free_split(train_df, train_df_aug, label_encoder, val_ratio=0.10, seed=SEED):
-    """Stratified split on the ORIGINAL images; each augmented copy joins its parent's
-    side of the split, and the validation set contains original images only."""
+    """Stratified split on the ORIGINAL images. Augmented copies of training images stay in
+    the training set; those of validation images are discarded, so the validation set
+    contains original images only."""
     labels = label_encoder.transform(train_df['label'])
     train_idx, val_idx = train_test_split(np.arange(len(train_df)), test_size=val_ratio,
                                           stratify=labels, random_state=seed)
@@ -249,6 +250,14 @@ tta_aug = A.Compose([
     A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ToTensorV2(),
 ])
+
+
+def seed_worker(_):
+    """DataLoader `worker_init_fn`: gives each worker its own Albumentations random state.
+    Albumentations keeps its generator inside the Compose object, so without this every
+    worker would start from the same state and repeat the same draws at every epoch."""
+    info = get_worker_info()
+    info.dataset.aug.set_random_seed(torch.initial_seed() % 2**32)
 
 
 class WBCDataset(Dataset):

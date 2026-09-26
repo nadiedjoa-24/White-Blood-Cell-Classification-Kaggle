@@ -1,5 +1,5 @@
 """
-Model, training loop and inference of the deployed deep-learning model (deep_9 no-morph):
+Model, training loop and inference of the final deep-learning model (deep_9 no-morph):
 ConvNeXt-Base + SE-style channel-attention gate + 3-layer MLP head, trained in two phases
 (frozen backbone, then full fine-tuning) with Focal loss, Mixup/CutMix and mixed precision.
 """
@@ -22,7 +22,7 @@ class WBCClassifier(nn.Module):
     """ConvNeXt-Base backbone, SE-style gate on the pooled features, MLP head.
 
     `n_morph_features > 0` adds a small branch for handcrafted morphology features that is
-    concatenated before the head (the deep_9 with-morph ablation). The deployed model uses
+    concatenated before the head (the deep_9 with-morph ablation). The final model uses
     `n_morph_features=0`.
     """
 

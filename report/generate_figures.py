@@ -4,7 +4,7 @@ Generate every figure of the report into report/figures/.
 Run from the repository root:  python report/generate_figures.py
 Needs the Kaggle data in data/ (with the oversampled and pre-cropped folders created by
 notebooks/04_final_model.ipynb), models/best_model.pt and results/classical_ml/.
-A GPU is recommended for the validation inference of the deployed model (~1 min).
+A GPU is recommended for the validation inference of the final model (~1 min).
 """
 import io
 import sys
@@ -128,8 +128,8 @@ def fig_augmentation_gallery():
     save(fig, 'augmentation_gallery.jpg')
 
 
-def deployed_model_validation():
-    """Validation predictions of the deployed checkpoint on the leakage-free split."""
+def final_model_validation():
+    """Validation predictions of the final model checkpoint on the leakage-free split."""
     _, val_df = leakage_free_split(train_df, aug_df, le)
     ds = WBCDataset(val_df, DATA / "train_precropped", le, val_aug)
     model = WBCClassifier(num_classes=len(le.classes_), pretrained=False)
@@ -197,14 +197,34 @@ def fig_qualitative_errors(val_df, y, probs):
     save(fig, 'qualitative_errors.jpg')
 
 
+def feature_family(name):
+    """Coarse family of a classical-pipeline feature, from its name."""
+    if name.startswith('pca_'):
+        return 'PCA'
+    for key, family in (('_lbp_', 'LBP texture'), ('_glcm_', 'GLCM texture'), ('_hog_', 'HOG')):
+        if key in name:
+            return family
+    if any(k in name for k in ('_hu_', '_fourier_', '_area', '_axis', '_perimeter', '_circularity',
+                               '_eccentricity', '_solidity', '_convexity', '_extent', '_lobes',
+                               '_diameter', 'nc_ratio')):
+        return 'Shape'
+    return 'Color'
+
+
 def fig_feature_importance():
     df = pd.read_csv(ROOT / "results" / "classical_ml" / "feature_importance_lightgbm.csv")
-    df = df.sort_values('importance', ascending=False).head(10)[::-1]
-    fig, ax = plt.subplots(figsize=(5.2, 3.6))
-    ax.barh(df['feature'], df['importance'], color='#4C78A8')
-    ax.tick_params(axis='y', labelsize=10)
+    df = df.sort_values('importance', ascending=False).head(30)[::-1]
+    palette = {'Color': '#4C78A8', 'LBP texture': '#F58518', 'GLCM texture': '#E45756',
+               'HOG': '#54A24B', 'Shape': '#B279A2', 'PCA': '#9D9D9D'}
+    families = df['feature'].map(feature_family)
+    fig, ax = plt.subplots(figsize=(5.2, 6.0))
+    ax.barh(df['feature'], df['importance'], color=families.map(palette))
+    ax.tick_params(axis='y', labelsize=9)
     ax.set_xlabel('Importance (split count)')
-    ax.set_title('Top-10 features (LightGBM split counts)', fontsize=12)
+    ax.set_title('Top-30 features (LightGBM split counts)', fontsize=12)
+    present = [f for f in palette if f in set(families)]
+    ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=palette[f]) for f in present],
+              labels=present, loc='lower right', fontsize=9)
     plt.tight_layout()
     save(fig, 'feature_importance_ml.pdf')
 
@@ -251,7 +271,7 @@ if __name__ == '__main__':
     fig_augmentation_gallery()
     fig_feature_importance()
     fig_iteration_timeline()
-    val_df, y, probs = deployed_model_validation()
+    val_df, y, probs = final_model_validation()
     fig_per_class_scores(y, probs.argmax(1))
     fig_confusion_matrix(y, probs.argmax(1))
     fig_qualitative_errors(val_df, y, probs)

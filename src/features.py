@@ -50,7 +50,7 @@ def extract_shape_features(mask_nucleus, mask_cell, mask_cytoplasm):
         feats['nuc_circularity'] = (4 * np.pi * area) / max(perimeter ** 2, 1)
         feats['nuc_perimeter'] = perimeter
         convex_area = main_nuc.convex_area if hasattr(main_nuc, 'convex_area') else main_nuc.area
-        feats['nuc_convexity'] = area / max(convex_area, 1)
+        feats['nuc_convexity'] = area / max(convex_area, 1)  # same definition as solidity
 
         # D — Dimension
         feats['nuc_major_axis'] = main_nuc.major_axis_length
@@ -222,7 +222,9 @@ def extract_hog_features(img_bgr, mask_nucleus, mask_cytoplasm):
 
 
 def extract_fourier_descriptors(mask_nucleus):
-    """Fourier descriptors of the nucleus contour — rotation/scale-invariant shape features."""
+    """Fourier descriptors of the nucleus contour, normalized by the DC term. The magnitudes are
+    rotation-invariant; the DC term depends on the nucleus position, so they are neither
+    translation- nor scale-invariant."""
     feats = {}
 
     contours, _ = cv2.findContours(mask_nucleus, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -244,7 +246,7 @@ def extract_fourier_descriptors(mask_nucleus):
     # FFT
     fourier = np.fft.fft(z)
 
-    # Normalize by DC component (translation invariance), take magnitude (rotation invariance)
+    # Magnitudes (rotation invariance), divided by the DC term |F[0]|, which depends on position
     dc = np.abs(fourier[0]) + 1e-10
     magnitudes = np.abs(fourier[1:N_FOURIER+1]) / dc
 

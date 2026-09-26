@@ -40,11 +40,12 @@ outputs of a notebook.
 - **Model**: ConvNeXt-Base pretrained on ImageNet, SE-style attention gate on the pooled
   features, 3-layer MLP head (88.5 M parameters).
 - **Training**: 5 epochs with a frozen backbone, then full fine-tuning with AdamW and cosine
-  warm restarts; Mixup/CutMix except for batches containing rare classes; early stopping on
+  warm restarts; Mixup/CutMix except for batches containing rare classes (which, with the
+  balanced sampler, leaves them active on only ~1 % of batches); early stopping on
   the validation macro-F1 (best epoch 21 of 31, about 70 min on one RTX 3090).
-- **Validation**: stratified split on the original images, with every augmented copy kept on
-  its parent's side. An earlier iteration that split after oversampling reported 0.822
-  instead of 0.699 because of this leakage.
+- **Validation**: stratified split on the original images; augmented copies of validation
+  images are discarded. An earlier iteration that split after oversampling put copies of
+  validation images in the training set and reported 0.822 instead of 0.699.
 - **Inference**: average of the logits of a plain pass and 8 random flip/rotation passes.
 
 ## Repository structure
