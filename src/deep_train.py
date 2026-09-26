@@ -5,7 +5,6 @@ ConvNeXt-Base + SE-style channel-attention gate + 3-layer MLP head, trained in t
 """
 import copy
 import time
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -17,7 +16,6 @@ from torchvision.models import ConvNeXt_Base_Weights, convnext_base
 
 from .deep_dataset import IMG_SIZE, TTA_ROUNDS, WBCDataset, tta_aug, val_aug
 
-MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
 
 
 class WBCClassifier(nn.Module):

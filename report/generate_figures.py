@@ -6,6 +6,7 @@ Needs the Kaggle data in data/ (with the oversampled and pre-cropped folders cre
 notebooks/04_final_model.ipynb), models/best_model.pt and results/classical_ml/.
 A GPU is recommended for the validation inference of the deployed model (~1 min).
 """
+import io
 import sys
 from pathlib import Path
 
@@ -34,11 +35,15 @@ CLASS_ORDER = ['SNE', 'LY', 'MO', 'BL', 'EO', 'MY', 'BA', 'BNE', 'VLY', 'MMY', '
 train_df = pd.read_csv(DATA / "train_metadata.csv")
 aug_df = pd.read_csv(DATA / "train_oversampled_metadata.csv")
 le = LabelEncoder().fit(train_df['label'])
-rng = np.random.default_rng(SEED)
-
 
 def save(fig, name):
-    fig.savefig(FIG_DIR / name, bbox_inches='tight', dpi=150)
+    """Vector PDF for charts; JPEG for photo grids, which would make large PDFs."""
+    if name.endswith('.jpg'):
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', dpi=150)
+        Image.open(buf).convert('RGB').save(FIG_DIR / name, quality=90)
+    else:
+        fig.savefig(FIG_DIR / name, bbox_inches='tight', dpi=150)
     plt.close(fig)
     print(f"  {name}")
 
@@ -78,7 +83,7 @@ def fig_class_examples():
         ax.set_title(f'({"abcdef"[k]}) {label}', fontsize=9)
         ax.axis('off')
     plt.tight_layout()
-    save(fig, 'class_examples.pdf')
+    save(fig, 'class_examples.jpg')
 
 
 def fig_crop_examples():
@@ -95,7 +100,7 @@ def fig_crop_examples():
             axes[i, j].set_title(title, fontsize=10)
             axes[i, j].axis('off')
     plt.tight_layout()
-    save(fig, 'crop_examples.pdf')
+    save(fig, 'crop_examples.jpg')
 
 
 def denormalize(tensor):
@@ -105,6 +110,7 @@ def denormalize(tensor):
 
 def fig_augmentation_gallery():
     classes, n_aug = ['PLY', 'BA', 'MY', 'SNE'], 6
+    train_aug.set_random_seed(SEED)
     ds = WBCDataset(pd.concat([train_df[train_df['label'] == c].head(1) for c in classes]),
                     DATA / "train_precropped", le)
     fig, axes = plt.subplots(len(classes), n_aug + 1, figsize=(2.6 * (n_aug + 1), 2.9 * len(classes)))
@@ -118,7 +124,7 @@ def fig_augmentation_gallery():
         for ax in axes[i]:
             ax.axis('off')
     plt.tight_layout()
-    save(fig, 'augmentation_gallery.pdf')
+    save(fig, 'augmentation_gallery.jpg')
 
 
 def deployed_model_validation():
@@ -187,7 +193,7 @@ def fig_qualitative_errors(val_df, y, probs):
         ax.axis('off')
     fig.suptitle('Most confident validation errors (deep_9 no-morph)', fontsize=11)
     plt.tight_layout()
-    save(fig, 'qualitative_errors.pdf')
+    save(fig, 'qualitative_errors.jpg')
 
 
 def fig_feature_importance():
@@ -218,16 +224,20 @@ def fig_iteration_timeline():
     ax.bar(x, scores, color=colors, edgecolor='white', width=0.65)
     for i, (s, lab) in enumerate(zip(scores, labels)):
         ax.text(i, s + 0.008, lab, ha='center', fontsize=8.5, fontweight='bold')
-    ax.annotate('', xy=(5, 0.705), xytext=(4, 0.825), arrowprops=dict(arrowstyle='->', color='red', lw=2))
-    ax.text(4.5, 0.765, 'Leakage\nfix', ha='center', fontsize=8, color='red', fontstyle='italic')
-    ax.text(4, 0.845, '* inflated by\ndata leakage', ha='center', fontsize=7, color='#f39c12',
+    ax.annotate('', xy=(5, 0.74), xytext=(4.35, 0.80), arrowprops=dict(arrowstyle='->', color='red', lw=2))
+    ax.text(4.85, 0.80, 'Leakage fix', ha='left', fontsize=8, color='red', fontstyle='italic')
+    ax.text(4, 0.875, '* inflated by data leakage', ha='center', fontsize=7.5, color='#f39c12',
             fontstyle='italic')
-    ax.axhline(0.705, color='gray', linestyle='--', alpha=0.4, label='Deployed model: 0.705')
+    ax.axhline(0.705, color='gray', linestyle='--', alpha=0.4)
+    legend = {'#3498db': 'Other iterations', '#e74c3c': 'Failed experiment',
+              '#f39c12': 'Leaky validation (invalid)', '#95a5a6': 'Leakage fix',
+              '#27ae60': 'Final model'}
+    ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=c, label=l) for c, l in legend.items()],
+              fontsize=8.5, loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=5, frameon=False)
     ax.set_xticks(x, names, fontsize=8.5)
     ax.set_ylabel('Validation macro-F1')
     ax.set_ylim(0, 0.95)
     ax.set_title('Validation macro-F1 across the 9 deep-learning iterations')
-    ax.legend(fontsize=9, loc='lower right')
     plt.tight_layout()
     save(fig, 'iteration_timeline.pdf')
 

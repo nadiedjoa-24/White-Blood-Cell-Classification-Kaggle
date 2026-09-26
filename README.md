@@ -26,8 +26,10 @@ re-run (15 epochs) of the same model, reproducible with `scripts/deep_1_rerun.py
 noisy: an earlier unseeded run of the same script gave 0.489.
 
 All scores are computed on held-out parts of the labelled training set, not on the Kaggle
-leaderboard. Every number is backed by a file in [`results/`](results/) or by the outputs of a
-notebook.
+leaderboard, and the protocols differ between rows (cross-validation vs. a single split). The
+difference between `deep_6` and the final model (+0.006) is within the noise of the validation
+split. Every score in this table is backed by a file in [`results/`](results/) or by the
+outputs of a notebook.
 
 ## Final model
 
@@ -81,12 +83,16 @@ data/
   sample_submission.csv
 ```
 
-Then run the notebooks in order from the `notebooks/` folder.
+Then run the notebooks in order from the `notebooks/` folder, with any Jupyter front end
+(JupyterLab, Notebook or VS Code).
 
 - `04_final_model.ipynb` creates the oversampled and cropped image folders in `data/` on its
   first run. It loads the trained weights from `models/best_model.pt` (354 MB, not versioned);
   without them, set `RETRAIN = True` to train the model again (about 70 min on one RTX 3090).
 - `02_classical_ml.ipynb` takes 8 to 10 hours on 4 CPU cores, mostly for the Stacking ensemble.
+  The files in `results/classical_ml/` were exported by an earlier scripted run of the same
+  functions (log in `run.log`); the notebook reproduces the same scores but does not rewrite
+  them.
 - `03_deep_learning_journey.ipynb` is a record of the experiments: its cells are excerpts of the
   original per-iteration notebooks, shown with their saved outputs, and are not meant to be
   re-executed.
@@ -106,6 +112,11 @@ from `report/`.
   optimistic.
 - The rarest classes (PLY: 11 images, PC: 68, PMY: 114) have very few validation images, so
   their per-class scores are noisy.
+- The deep-learning validation split is also used for early stopping and for choosing between
+  iterations, so its scores are somewhat optimistic; they come from a single split and seed.
+- The Reinhard normalization of the classical pipeline uses the spread of per-image means as
+  reference standard deviation instead of the pixel-level one, which compresses contrast
+  before segmentation.
 
 ## Main references
 
