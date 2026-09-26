@@ -152,7 +152,7 @@ def fig_per_class_scores(y, pred):
     ax.set_xticks(x, le.classes_[order], rotation=45, ha='right')
     ax.set_ylim(0, 1.08)
     ax.set_ylabel('Score')
-    ax.set_title('Per-class precision / recall / F1 on validation (deep_9 no-morph)')
+    ax.set_title('Per-class precision / recall / F1 on validation (final model)')
     ax.legend(loc='upper left', fontsize=9)
     plt.tight_layout()
     save(fig, 'per_class_f1.pdf')
@@ -175,7 +175,7 @@ def fig_confusion_matrix(y, pred):
         ax.set_xlabel('Predicted')
         ax.set_ylabel('True')
         ax.set_title(title)
-    fig.suptitle(f'deep_9 no-morph, validation (n = {len(y):,}), '
+    fig.suptitle(f'Final model, validation (n = {len(y):,}), '
                  f'macro-F1 = {f1_score(y, pred, average="macro"):.4f}', fontsize=13)
     plt.tight_layout()
     save(fig, 'confusion_matrix.pdf')
@@ -191,7 +191,7 @@ def fig_qualitative_errors(val_df, y, probs):
         ax.set_title(f'True: {le.classes_[y[i]]} | Pred: {le.classes_[pred[i]]} '
                      f'({100 * conf[i]:.1f}%)', fontsize=9)
         ax.axis('off')
-    fig.suptitle('Most confident validation errors (deep_9 no-morph)', fontsize=11)
+    fig.suptitle('Most confident validation errors (final model)', fontsize=11)
     plt.tight_layout()
     save(fig, 'qualitative_errors.jpg')
 
@@ -210,14 +210,14 @@ def fig_feature_importance():
 
 def fig_iteration_timeline():
     # Validation macro-F1 of each iteration, from notebooks/03_deep_learning_journey.ipynb.
-    names = ['deep_1\n(EfficientNet\nbaseline)', 'deep_2\n(+CBAM\n+augment)',
-             'deep_3\n(+Fusion\n+features)', 'deep_4\n(Paper\nsegment.)',
-             'deep_5\n(ConvNeXt\n+CutMix)', 'deep_6\n(Leakage\nfix)',
-             'deep_7\n(ResNet50\n+SpatialAtt)', 'deep_8\n(ResNeXt101\n+MultiTask)',
-             'deep_9\n(ConvNeXt+SE\nno-morph)']
+    names = ['Exp 1\n(EfficientNet\nbaseline)', 'Exp 2\n(+CBAM\n+augment)',
+             'Exp 3\n(+Fusion\n+features)', 'Exp 4\n(Paper\nsegment.)',
+             'Exp 5\n(ConvNeXt\n+CutMix)', 'Exp 6\n(Leakage\nfix)',
+             'Exp 7\n(ResNet50\n+SpatialAtt)', 'Exp 8\n(ResNeXt101\n+MultiTask)',
+             'Exp 9\n(ConvNeXt+SE\nfinal model)']
     scores = [0.552, 0.633, 0.641, 0.591, 0.822, 0.699, 0.651, 0.665, 0.705]
     labels = [f'{s:.3f}' for s in scores]
-    labels[4], labels[8] = '0.822*', '0.705\n(deployed)'
+    labels[4], labels[8] = '0.822*', '0.705\n(final)'
     colors = ['#3498db'] * 3 + ['#e74c3c', '#f39c12', '#95a5a6', '#3498db', '#3498db', '#27ae60']
     fig, ax = plt.subplots(figsize=(16, 5))
     x = np.arange(len(names))
@@ -237,7 +237,7 @@ def fig_iteration_timeline():
     ax.set_xticks(x, names, fontsize=8.5)
     ax.set_ylabel('Validation macro-F1')
     ax.set_ylim(0, 0.95)
-    ax.set_title('Validation macro-F1 across the 9 deep-learning iterations')
+    ax.set_title('Validation macro-F1 across the 9 deep-learning experiments')
     plt.tight_layout()
     save(fig, 'iteration_timeline.pdf')
 
